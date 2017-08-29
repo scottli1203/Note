@@ -20,3 +20,75 @@ let sql = `INSERT INTO user_token(user_id,email,token) VALUES(${userId},'${email
           model.sequelize.query(sql).then((result) => {
             console.log(result)
           })
+
+
+import React from 'react'
+import { render } from 'react-dom'
+import { Router, Route, browserHistory, IndexRoute } from 'react-router'
+// import App from './modules/App'
+// import About from './modules/About'
+// import Repos from './modules/Repos'
+// import Repo from './modules/Repo'
+// import Home from './modules/Home'
+
+// render((
+//   <Router history={hashHistory}>
+//     <Route path="/" component={App}>
+//       <IndexRoute component={Home}/>
+//       <Route path="/repos" component={Repos}>
+//         <Route path="/repos/:userName/:repoName" component={Repo}/>
+//       </Route>
+//       <Route path="/about" component={About}/>
+//     </Route>
+//   </Router>
+// ), document.getElementById('app'))
+
+const rootRoute = {
+    path: '/',
+    indexRoute: {
+        getComponent(nextState, cb) {
+            require.ensure([], (require) => {
+                cb(null, require('./modules/Home').default)
+            }, 'HomePage')
+        },
+    },
+    getComponent(nextState, cb) {
+        require.ensure([], (require) => {
+            cb(null, require('./modules/App').default)
+        }, 'App')
+    },
+    childRoutes: [
+        {
+            path:'about',
+            getComponent(nextState, cb) {
+                require.ensure([], (require) => {
+                    cb(null, require('./modules/About').default)
+                }, 'About')
+            }
+        },
+        {
+            path:'repos',
+            getComponent(nextState, cb) {
+                require.ensure([], (require) => {
+                    cb(null, require('./modules/Repos').default)
+                }, 'Repos')
+            }
+        },
+        {
+            path:'reactjs',
+            getComponent(nextState, cb) {
+                require.ensure([], (require) => {
+                    cb(null, require('./modules/Repo').default)
+                }, 'Repo')
+            },
+        }
+    ]
+}
+
+render(
+        <Router
+            history={browserHistory}
+            routes={rootRoute}
+        />
+    , document.getElementById('app')
+);
