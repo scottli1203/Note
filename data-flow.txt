@@ -1,0 +1,19 @@
+react 数据流：遵从单向数据流。
+1，组件间的数据流，主要是从父节点传到子节点。
+2，Flux中的数据流
+     Flux将一个应用分成四个部分      View： 视图层
+* 		Action（动作）：视图层发出的消息（比如mouseClick）
+* 		Dispatcher（派发器）：用来接收Actions、执行回调函数
+* 		Store（数据层）：用来存放应用的状态，一旦发生变动，就提醒Views要更新页面
+* 
+* 用户访问 View
+* View 发出用户的 Action
+* Dispatcher 收到 Action，要求 Store 进行相应的更新
+* Store 更新后，发出一个"change"事件
+* View 收到"change"事件后，更新页面
+
+上面的过程中，数据流是单向的，任何相邻的模块之间，不会出现双向的数据流。
+所以，在一个react+ flux的应用中，数据流就是从父组件到action, 再到dispatcher,然后再到store,最终再到父组件，然后再到父组件到所有子组件。l
+3，Redux中的到数据流
+重复一下上节中redux的数据流，整个过程如上图
+整个数据流都是单向的，从view或者子view—>action—>reducer->view
