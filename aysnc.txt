@@ -1,0 +1,64 @@
+我们这里只讲两个异步处理的
+1， Redux Thunk
+const fetchAllUsers = departmentId => (dispatch, getState) => {
+  return fetch(`http://localhost:3000/api/v1/departments/${departmentId}/users`)
+    .then(response => response.json())
+    .then(json => dispatch(receivePosts(postTitle, json)));
+  };
+};
+以上action 创建函数返回函数时，这个函数会被Redux Thunk 中间件执行。这个函数
+不需要保持纯净，它还可以带有副作用，包括执行异步api；这个函数还可以dospatch action
+这个函数接受两个参数(dispatch,getState)
+而store.dispatch方法正常情况下，参数只能是对象，不能是函数。
+这时，就要使用中间件redux-thunk。
+import { createStore, applyMiddleware } from 'redux';
+import thunk from 'redux-thunk';
+import reducer from './reducers';
+
+// Note: this API requires redux@>=3.1.0
+const store = createStore(
+  reducer,
+  applyMiddleware(thunk)
+);
+上面代码使用redux-thunk中间件，改造store.dispatch，使得后者可以接受函数作为参数。
+因此，异步操作的第一种解决方案就是： 写出一个返回函数的 Action Creator，然后使用redux-thunk中间件改造store.dispatch。
+
+既然 Action Creator 可以返回函数，当然也可以返回其他值。另一种异步操作的解决方案，就是让 Action Creator 返回一个 Promise 对象。
+这就需要使用redux-promise中间件。
+import { createStore, applyMiddleware } from 'redux';
+import promiseMiddleware from 'redux-promise';
+import reducer from './reducers';
+
+const store = createStore(
+  reducer,
+  applyMiddleware(promiseMiddleware)
+); 
+
+这个中间件使得store.dispatch方法可以接受 Promise 对象作为参数
+const fetchPosts = 
+  (dispatch, postTitle) => new Promise(function (resolve, reject) {
+     dispatch(requestPosts(postTitle));
+     return fetch(`/some/API/${postTitle}.json`)
+       .then(response => {
+         type: 'FETCH_POSTS',
+         payload: response.json()
+       });
+});
+
+
+redux-saga 是一个用于管理 Redux 应用异步操作的中间件（又称异步 action）。
+ redux-saga 通过创建 Sagas 将所有的异步操作逻辑收集在一个地方集中处理，可以用来代替 redux-thunk 中间件。
+Sagas 是通过 Generator 函数来创建的。
+Sagas 不同于 Thunks，Thunks 是在 action 被创建时调用，而 Sagas 只会在应用启动时调用。Sagas 可以被看作是在后台运行的进程。
+Sagas 监听发起的 action，然后决定基于这个 action 来做什么：是发起一个异步调用（比如一个 Ajax 请求），还是发起其他的 action 到 Store，甚至是调用其他的 Sagas
+因为使用了 Generator，redux-saga 让你可以用同步的方式写异步代码
+这意味着应用的逻辑会存在两个地方：
+* Reducers 负责处理 action 的 state 更新。 
+* Sagas 负责协调那些复杂或异步的操作。 
+向比如redux-thunk, redux-promise, 我们把所有的异步代码和action 彻底分开，action 中就只有action 的创建函数，和常量，变得更加纯洁。
+
+除了上面的三种异步操作方式，还可以使用下面的来管理异步操作
+* 你可以使用 redux-observable 来 dispatch Observable。
+* 你可以使用 redux-pack 中间件 dispatch 基于 Promise 的异步 Action。
+* 你甚至可以写一个自定义的 middleware 来描述 API 请求，就像这个 真实场景的案例 中的做法一样。
+
