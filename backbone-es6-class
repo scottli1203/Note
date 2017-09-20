@@ -1,0 +1,132 @@
+ES6的class 怎么运用到backbone中。
+
+
+backbone 的demo.
+
+var DocumentRow = Backbone.View.extend({
+
+  tagName: "li",
+
+  className: "document-row",
+
+  events: {
+    "click .icon":          "open",
+    "click .button.edit":   "openEditDialog",
+    "click .button.delete": "destroy"
+  },
+
+  initialize: function() {
+    this.listenTo(this.model, "change", this.render);
+  },
+
+  render: function() {
+    //...
+  }
+
+});
+
+理想中的es6  的class 的写法如下
+class DocumentRow extends Backbone.View {
+
+  tagName: "li"
+
+  className: "document-row"
+
+  events: {
+    "click .icon":          "open",
+    "click .button.edit":   "openEditDialog",
+    "click .button.delete": "destroy"
+  }
+
+  initialize() {
+    this.listenTo(this.model, "change", this.render);
+  }
+
+  render() {
+    //...
+  }
+}
+不过遗憾的是，上面的代码是错误的。因为在es6中，不允许直接给类的实例添加属性，只能添加方法或者函数。
+
+想要在backbone中运用es6点class, 必须理解下面亮点。
+1，Backbone 在执行类的构造方法之前，会把所有的实例属性初始化并且加载到类的原型上面。 
+2，ES6 没有提供任何在类里面去给类的原型设置属性。也不允许在构造函数调用super()之前初始化实例属性。
+所以问题的难点就集中在：解决在ES6 class 的构造方法执行之前，对实例属性进行初始化。
+
+第一种解决方案如下
+class DocumentRow extends Backbone.View {
+
+    tagName() { return "li"; }
+
+    className() { return "document-row";}
+
+    events() {
+        return {
+            "click .icon":          "open",
+            "click .button.edit":   "openEditDialog",
+            "click .button.delete": "destroy"
+        };
+    }
+
+    initialize() {
+        this.listenTo(this.model, "change", this.render);
+    }
+
+    render() {
+        //...
+    }
+}
+把所有的属性定义成函数。
+原理：backbone计算所有的属性是通过用underscore 的_result 函数，这个函数会判断backbone的所有的属性，如果是函数的话，会直接返回结果，然后绑定到对象原型上面。
+上面的方式个人觉得不太优雅。不喜欢用。
+
+第二种方式：直接传递属性到父类的构造函数
+class DocumentRow extends Backbone.View {
+    constructor() {
+        super({
+            tagName:  'li',
+            className: ‘document-row’,
+            events: {
+                "click .icon":          "open",
+                "click .button.edit":   "openEditDialog",
+                "click .button.delete": "destroy"
+            }
+        });
+    }
+
+
+    initialize() {
+       this.listenTo(this.model, "change", this.render);
+
+    }
+    render() {
+        //…
+    }
+};
+
+通过这种方式实例属性都会被绑定到实例对象上面，会和原来的方式Backbone.View.extend 的属性绑定有所不一样而且实例属性的初始化都是在constructor中完成的。对一些不太依赖实例属性作初始化的类，这种方式还是有用的。
+
+第三种方式：直接把属性定义在原型上面。
+class DocumentRow extends Backbone.View {
+    initialize() {
+       this.listenTo(this.model, "change", this.render);
+
+    }
+    render() {
+        //…
+    }
+};
+
+DocumentRow.prototype.tagName = 'li';
+DocumentRow.prototype.className = “document-row";
+DocumentRow.prototype.events = {
+            "click .icon":          "open",
+            "click .button.edit":   "openEditDialog",
+            "click .button.delete": "destroy"
+};
+上面的方式本质上是把 backbone 自动绑定实例属性到原型上的步骤，显示的通过我们的代码来完成了，而且实例属性的初始化在constructor方法执行之前。做到了和扩展Backbone.View.extend {}的写法一摸一样。相比如第一种个人比较喜欢这种方式，建议使用。
+
+第四种方式就是ES7 and Decorators原理和第三种方式差不多，都是显示的把属性绑定在原型上面。只不是相比如手动写代码，它是都过注释@标签实现的。这里就不详细的列出来了，可以去参考文档https://benmccormick.org/2015/07/06/backbone-and-es6-classes-revisited
+
+
+
