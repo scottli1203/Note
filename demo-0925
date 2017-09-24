@@ -1,0 +1,164 @@
+const Shark = Backbone.View.extend({
+    constructor: function constructor(options) {
+        this.init(options);
+        const args = Array.prototype.slice.call(arguments);
+
+        args[0] = this.options;
+        Backbone.View.prototype.constructor.apply(this, args);
+        console.log('options = ', options);
+    },
+
+    init(options) {
+        for (const key in options) {
+            this[key] = options[key];
+        }
+        console.log(this.events);
+        this.bindModel();
+        this.bindComputed();
+    },
+
+    bindComputed(){
+
+        console.log(this.computed);
+        for(let key in this.computed){
+            let method = this.computed[key];
+            // 记录方法中绑定了模型中的哪些变量
+            this[key] = method;
+        }
+
+
+    },
+
+    bindEvent() {
+        const events = this.events;
+
+        for (const key in events) {
+            const handler = this.getEventHandler(events[key]);
+            const result = key.split(' ');
+            const method = result[0];
+            const selector = result[1];
+
+
+            $(selector).on(method, handler);
+        }
+    },
+    deps:{
+
+    },
+    bindModel() {
+        let model = this.model;
+        model.set = this.setModelChanged.bind(this);
+        model.get = function(key){
+            // 绑定属性所有的依赖函数。
+            this.deps[key] = this.deps[key] || [];
+            let caller = arguments.callee.caller.name;
+            if(this.deps[key].indexOf(caller) === -1){
+                this.deps[key].push(caller);
+            }
+
+            return model[key]
+        }.bind(this);
+    },
+    setModelChanged(key, value) {
+        this.modelChanges = [];
+        let previousModel = this.previousModel;
+        let currentModel = this.model;
+
+        if (!previousModel) {
+            this.previousModel = previousModel = Object.assign({}, currentModel);
+        }
+
+        // changed;
+        currentModel[key] = value;
+        for (let attr in currentModel){
+            let value = currentModel[attr];
+            let preValue = previousModel[attr];
+
+            if(!_.isEqual(value, preValue)){
+                this.modelChanges.push(attr);
+            }
+        }
+
+        let changedProps = this.modelChanges;
+        changedProps.forEach(key => {
+            let methods = this.deps[key];
+            methods.forEach(method => {
+                this[method].call(this);
+            })
+        })
+
+    },
+    getEventHandler(key) {
+        const methods = this.methods;
+
+        return methods[key].bind(this);
+    },
+    beforeRender() {},
+    render() {},
+    afterRender() {
+        this.bindEvent();
+    },
+    start() {
+        this.beforeRender();
+        this.render();
+        this.afterRender();
+    }
+});
+
+console.log(Shark);
+
+
+
+
+
+
+const componentA = new Shark({
+    el: '#example',
+    template: _.template('<div>hello,shark<div class="content">content</div><div><%= this.welcomeMsg() %></div></div>'),
+    events: {
+        'click .content': 'onClickBtn'
+    },
+    model: {
+        msg: 'hello',
+        name: 'nobody'
+    },
+    components: {
+        'child-component': {
+            com: {},
+            data: {
+                msg: 'I am a fucking child',
+                changeMyFather: (e) => {
+                    console.log(e);
+                }
+            }
+        }
+    },
+    computed: {
+        welcomeMsg: function(){
+            console.log(123);
+            return this.model.get('msg') + this.model.get('name')
+        }
+    },
+    methods: {
+        onClickBtn: function(event){
+            console.log(this);
+            this.model.set('name', 'FED');
+
+
+            /* if (e.target.style.border) {
+                e.target.style.border = '';
+            } else {
+                e.target.style.border = '1px solid #c3c3c3';
+            }*/
+        }
+    },
+    render() {
+        //console.log(this.model.get('name'));
+        $(this.el).html(this.template(null));
+    }
+});
+
+
+/* new componentA().render();*/
+
+componentA.start();
