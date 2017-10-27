@@ -1,0 +1,139 @@
+var Dep = null;
+
+function defineReactive(obj, key, val){
+    "use strict";
+    var deps = [];
+    Object.defineProperty(obj, key, {
+        get: function(){
+            if(Dep){
+                deps.push(Dep);
+            }
+            return val;
+        },
+        set: function(newVal) {
+            val = newVal;
+            deps.forEach(func => func());
+        }
+    })
+}
+
+function defineReactive2(obj){
+    "use strict";
+
+    obj.get = function(key){
+
+        obj.deps = obj.deps || {};
+
+        obj.deps[key] = obj.deps[key] || [];
+
+        if(Dep){
+            obj.deps[key].push(Dep);
+        }
+
+        return obj[key];
+    };
+
+    obj.set = function(key, val){
+        obj[key] = val;
+
+        var keyDeps = obj.deps[key];
+
+        keyDeps.forEach(func => func());
+    }
+
+}
+
+function defineComputed2(obj, key, fn){
+    "use strict";
+    fn = fn.bind(obj)
+    var value;
+
+    Dep = function() {
+        value = fn();
+        obj[key] = value;
+    };
+
+    value = fn();
+
+    Dep = null;
+
+    obj[key] = value;
+}
+
+
+var objB = {a: 10, value: 12};
+
+
+
+defineReactive2(objB);
+
+// objB.keys.forEach(key => {
+//     "use strict";
+//
+// });
+
+
+defineComputed2(objB, 'b', function(){
+    "use strict";
+    var a = this.get('a');
+
+    return a + 1;
+});
+defineComputed2(objB, 'c', function(){
+    "use strict";
+    var a = this.get('a') * 2;
+
+    return a + 1;
+});
+
+defineComputed2(objB, 'd', function(){
+    "use strict";
+    var a = this.get('value') * 3;
+
+    return a + 1;
+});
+
+defineComputed2(objB, 'e', function(){
+    "use strict";
+    var a = this.get('value') * 4;
+
+    return a + 1;
+});
+
+
+function defineComputed(obj, key, fn){
+    "use strict";
+    fn = fn.bind(obj)
+    var value;
+
+    Dep = function() {
+        value = fn();
+    };
+
+    value = fn();
+
+    Dep = null;
+
+    Object.defineProperty(obj, key, {
+        get: function(){
+            return value;
+        }
+    })
+}
+
+var obj = {};
+
+defineReactive(obj, 'a', 0);
+defineComputed(obj, 'b', function(){
+    "use strict";
+    var a = this.a;
+
+    return a + 1;
+});
+
+defineComputed(obj, 'c', function(){
+    "use strict";
+    var a = this.a * 2;
+
+    console.log(a);
+})
