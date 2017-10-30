@@ -1,12 +1,17 @@
 var Dep = null;
+var WatchDep = null;
 
 function defineReactive(obj, key, val){
     "use strict";
     var deps = [];
+    var watcherDeps = [];
     Object.defineProperty(obj, key, {
         get: function(){
             if(Dep){
                 deps.push(Dep);
+            }
+            if(WatchDep){
+                watcherDeps.push(WatchDep);
             }
             return val;
         },
@@ -26,8 +31,16 @@ function defineReactive2(obj){
 
         obj.deps[key] = obj.deps[key] || [];
 
+        obj.watcherDeps = obj.watcherDeps || {};
+        obj.watcherDeps[key] = obj.watcherDeps[key] || [];
+
+
         if(Dep){
             obj.deps[key].push(Dep);
+        }
+
+        if(WatchDep){
+            obj.watcherDeps[key].push(WatchDep);
         }
 
         return obj[key];
@@ -39,6 +52,46 @@ function defineReactive2(obj){
         var keyDeps = obj.deps[key];
 
         keyDeps.forEach(func => func());
+
+        var watcherDeps = obj.watcherDeps[key];
+        watcherDeps.forEach(w => w.run());
+    }
+
+}
+
+function defineReactive3(obj){
+    "use strict";
+
+    obj.data.get = function(key){
+
+        obj.deps = obj.deps || {};
+
+        obj.deps[key] = obj.deps[key] || [];
+
+        obj.watcherDeps = obj.watcherDeps || {};
+        obj.watcherDeps[key] = obj.watcherDeps[key] || [];
+
+
+        if(Dep){
+            obj.deps[key].push(Dep);
+        }
+
+        if(WatchDep){
+            obj.watcherDeps[key].push(WatchDep);
+        }
+
+        return obj[key];
+    };
+
+    obj.data.set = function(key, val){
+        obj[key] = val;
+
+        var keyDeps = obj.deps[key];
+
+        keyDeps.forEach(func => func());
+
+        var watcherDeps = obj.watcherDeps[key];
+        watcherDeps.forEach(w => w.run());
     }
 
 }
@@ -61,44 +114,51 @@ function defineComputed2(obj, key, fn){
 }
 
 
-var objB = {a: 10, value: 12};
+var objB = {
+    a: 10,
+    value: 12,
+    data:{
+        a: 1,
+        b: 2
+    }
+};
 
 
 
-defineReactive2(objB);
+defineReactive3(objB);
 
 // objB.keys.forEach(key => {
 //     "use strict";
 //
 // });
 
-
-defineComputed2(objB, 'b', function(){
-    "use strict";
-    var a = this.get('a');
-
-    return a + 1;
-});
-defineComputed2(objB, 'c', function(){
-    "use strict";
-    var a = this.get('a') * 2;
-
-    return a + 1;
-});
-
-defineComputed2(objB, 'd', function(){
-    "use strict";
-    var a = this.get('value') * 3;
-
-    return a + 1;
-});
-
-defineComputed2(objB, 'e', function(){
-    "use strict";
-    var a = this.get('value') * 4;
-
-    return a + 1;
-});
+//
+// defineComputed2(objB, 'b', function(){
+//     "use strict";
+//     var a = this.get('a');
+//
+//     return a + 1;
+// });
+// defineComputed2(objB, 'c', function(){
+//     "use strict";
+//     var a = this.get('a') * 2;
+//
+//     return a + 1;
+// });
+//
+// defineComputed2(objB, 'd', function(){
+//     "use strict";
+//     var a = this.get('value') * 3;
+//
+//     return a + 1;
+// });
+//
+// defineComputed2(objB, 'e', function(){
+//     "use strict";
+//     var a = this.get('value') * 4;
+//
+//     return a + 1;
+// });
 
 
 function defineComputed(obj, key, fn){
@@ -121,7 +181,62 @@ function defineComputed(obj, key, fn){
     })
 }
 
-var obj = {};
+var Watcher = function(vm, key, callback){
+    this.vm = vm;
+    this.key = key;
+    this.callback = callback;
+    this.update = function update(){
+        this.run();
+    };
+    this.run = function run(){
+        const value = this.get();
+        if(value !== this.value){
+            this.value = value;
+            this.callback.call(this.vm)
+        }
+    };
+    this.get = function get(){
+        WatchDep = this;
+        const value = this.vm.data.get(this.key);
+        WatchDep = null;
+        return value
+    }
+};
+
+// var watcher = Object.assign(Watcher.prototype, {
+//     update: function update(){
+//         this.run();
+//     },
+//     run: function run(){
+//         const value = this.get();
+//         if(value !== this.value){
+//             this.value = value;
+//             this.callback.call(this.vm)
+//         }
+//     },
+//     get: function get(){
+//         WatchDep = this;
+//         const value = this.vm.data.get(this.key);
+//         WatchDep = null;
+//         return value
+//     }
+// });
+
+function callback1(){
+    "use strict";
+    console.log('callback1');
+}
+
+var a = new Watcher(objB, 'a', callback1);
+a.run();
+
+var obj = {
+    data: {
+        a: 1,
+        b: 2
+    }
+};
+
 
 defineReactive(obj, 'a', 0);
 defineComputed(obj, 'b', function(){
